@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">RevolutTest</string>
+
+    <string name="exception_failed_to_fetch">Failed to fetch currencies from remote</string>
+</resources>
