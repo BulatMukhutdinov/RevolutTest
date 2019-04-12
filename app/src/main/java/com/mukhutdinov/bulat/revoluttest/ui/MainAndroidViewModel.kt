@@ -18,6 +18,8 @@ class MainAndroidViewModel(private val gateway: CurrenciesGateway) : MainViewMod
 
     override val currencies = MutableLiveData<List<Currency>>()
 
+    override val error = MutableLiveData<String>()
+
     private val disposable: Disposable
 
     init {
@@ -29,20 +31,15 @@ class MainAndroidViewModel(private val gateway: CurrenciesGateway) : MainViewMod
                     currencies.value =
                         mutableListOf<Currency>().apply {
                             add(baseCurrency)
-                            var a = 0
                             it.rates.forEach { rate ->
-                                a++
-                                if (a < 5) {
-                                    add(Currency(rate.key).apply { value = BigDecimal(rate.value) })
-                                }
+                                add(Currency(rate.key).apply { value = BigDecimal(rate.value) })
                             }
                         }
 
                     isUpToDate.value = it.date.isNotEmpty()
                 },
                 {
-                    print("ERROR")
-                    // todo error handling
+                    error.value = it.message
                 }
             )
     }

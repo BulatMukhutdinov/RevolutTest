@@ -105,6 +105,6 @@ class CurrenciesBoundedGateway(
         }
 
     companion object {
-        private const val UPDATE_RATE = 200L
+        private const val UPDATE_RATE = 1L
     }
 }

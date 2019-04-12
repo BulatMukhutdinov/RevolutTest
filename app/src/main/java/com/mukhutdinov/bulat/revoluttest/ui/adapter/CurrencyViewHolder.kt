@@ -10,6 +10,9 @@ import com.mukhutdinov.bulat.revoluttest.R
 import com.mukhutdinov.bulat.revoluttest.model.Currency
 import kotlinx.android.synthetic.main.currency_item.view.*
 import java.math.BigDecimal
+import java.text.NumberFormat
+import java.util.*
+
 
 class CurrencyViewHolder(
     view: View,
@@ -19,8 +22,8 @@ class CurrencyViewHolder(
 
     private val currency = itemView.currency
     private val amount = itemView.amount
-
     private lateinit var textWatcher: TextWatcher
+    private val decimalFormat = NumberFormat.getInstance(Locale.US)
 
     fun bindTo(item: Currency) {
         currency.text = item.name
@@ -36,12 +39,11 @@ class CurrencyViewHolder(
     }
 
     private fun format(value: BigDecimal): String {
-        val zero = BigDecimal.ZERO
-        return if (value.compareTo(zero) == 0) {
-            "0"
-        } else {
-            value.stripTrailingZeros().toEngineeringString()
-        }
+        val decimal = value.setScale(2, BigDecimal.ROUND_DOWN)
+        decimalFormat.maximumFractionDigits = 2
+        decimalFormat.minimumFractionDigits = 0
+        decimalFormat.isGroupingUsed = false
+        return decimalFormat.format(decimal)
     }
 
     fun onRecycled() {
@@ -50,9 +52,7 @@ class CurrencyViewHolder(
         }
     }
 
-
     companion object {
-
         fun create(
             parent: ViewGroup,
             clickListener: (Int) -> Unit,

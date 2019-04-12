@@ -5,6 +5,7 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import com.mukhutdinov.bulat.revoluttest.model.Currency
 import java.math.BigDecimal
+import java.math.RoundingMode
 
 class CurrencyAdapter(baseCurrency: Currency) : RecyclerView.Adapter<CurrencyViewHolder>() {
 
@@ -15,6 +16,8 @@ class CurrencyAdapter(baseCurrency: Currency) : RecyclerView.Adapter<CurrencyVie
     private var selected: Currency = baseCurrency
 
     private var coefficient: BigDecimal = BigDecimal.ONE
+
+    private var onBind = false
 
     private val clickListener: (Int) -> Unit = {
         selected = baseCurrencies[it]
@@ -28,7 +31,7 @@ class CurrencyAdapter(baseCurrency: Currency) : RecyclerView.Adapter<CurrencyVie
     }
 
     private val selectedValueChangeListener: (String) -> Unit = {
-        coefficient = BigDecimal(it) / selected.value
+        coefficient = BigDecimal(it).divide(selected.value, SCALE, RoundingMode.CEILING)
 
         val copy = baseCurrencies.map { it.copy().apply { value = it.value } }
 
@@ -46,7 +49,21 @@ class CurrencyAdapter(baseCurrency: Currency) : RecyclerView.Adapter<CurrencyVie
         baseCurrencies.clear()
         baseCurrencies.addAll(sort(updated))
 
+        if (baseCurrencies.isNotEmpty()) {
+            coefficient = (coefficient * selected.value.divide(baseCurrencies[0].value, SCALE, RoundingMode.CEILING))
+                .stripTrailingZeros()
+            coefficient = coefficient.setScale(SCALE, RoundingMode.CEILING)
+            selected = baseCurrencies[0]
+        }
+
         val sorted = sort(updated).map { it.copy().apply { value = it.value } }
+        if (shownCurrencies.isNotEmpty()) {
+            sorted.forEachIndexed { index, item ->
+                if (index == 0) item.value = shownCurrencies[0].value
+                else item.value *= coefficient
+            }
+        }
+
         dispatchUpdates(shownCurrencies, sorted.toMutableList())
         shownCurrencies.clear()
         shownCurrencies.addAll(sorted)
@@ -59,7 +76,9 @@ class CurrencyAdapter(baseCurrency: Currency) : RecyclerView.Adapter<CurrencyVie
         oldValues.clear()
         oldValues.addAll(newValues)
 
-        userDiffResult.dispatchUpdatesTo(this)
+        if (!onBind) {
+            userDiffResult.dispatchUpdatesTo(this)
+        }
     }
 
     private fun sort(list: List<Currency>): List<Currency> {
@@ -79,7 +98,9 @@ class CurrencyAdapter(baseCurrency: Currency) : RecyclerView.Adapter<CurrencyVie
         shownCurrencies.size
 
     override fun onBindViewHolder(holder: CurrencyViewHolder, position: Int) {
+        onBind = true
         holder.bindTo(shownCurrencies[position])
+        onBind = false
     }
 
     override fun onViewRecycled(holder: CurrencyViewHolder) {
@@ -92,5 +113,9 @@ class CurrencyAdapter(baseCurrency: Currency) : RecyclerView.Adapter<CurrencyVie
 
     override fun getItemId(position: Int): Long {
         return shownCurrencies[position].name.hashCode().toLong()
+    }
+
+    companion object {
+        private const val SCALE = 10
     }
 }

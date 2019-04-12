@@ -10,4 +10,6 @@ interface MainViewModel {
     val currencies: LiveData<List<Currency>>
 
     val isUpToDate: LiveData<Boolean>
+
+    val error: LiveData<String>
 }
