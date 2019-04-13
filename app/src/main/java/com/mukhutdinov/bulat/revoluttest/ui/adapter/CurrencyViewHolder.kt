@@ -32,7 +32,7 @@ class CurrencyViewHolder(
 
         textWatcher = amount.doOnTextChanged { text, _, _, _ ->
             if (adapterPosition == 0 && text != null) {
-                if (text.isEmpty()) valueChangeListener("0")
+                if (text.isEmpty() || text.toString() == ".") valueChangeListener("0")
                 else valueChangeListener(text.toString())
             }
         }

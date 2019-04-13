@@ -18,29 +18,27 @@ class MainAndroidViewModel(private val gateway: CurrenciesGateway) : MainViewMod
 
     override val currencies = MutableLiveData<List<Currency>>()
 
-    override val error = MutableLiveData<String>()
+    override val error = MutableLiveData<String?>()
 
     private val disposable: Disposable
 
     init {
         disposable = gateway.observe()
+            .observeOn(Schedulers.computation())
+            .doOnNext { isUpToDate.postValue(it.date.isNotEmpty()) }
+            .map {
+                mutableListOf<Currency>().apply {
+                    add(baseCurrency)
+                    it.rates.forEach { rate ->
+                        add(Currency(rate.key).apply { value = BigDecimal(rate.value) })
+                    }
+                }
+            }
             .observeOn(AndroidSchedulers.mainThread())
             .subscribeOn(Schedulers.io())
             .subscribe(
-                {
-                    currencies.value =
-                        mutableListOf<Currency>().apply {
-                            add(baseCurrency)
-                            it.rates.forEach { rate ->
-                                add(Currency(rate.key).apply { value = BigDecimal(rate.value) })
-                            }
-                        }
-
-                    isUpToDate.value = it.date.isNotEmpty()
-                },
-                {
-                    error.value = it.message
-                }
+                { currencies.value = it },
+                { error.value = it.message }
             )
     }
 

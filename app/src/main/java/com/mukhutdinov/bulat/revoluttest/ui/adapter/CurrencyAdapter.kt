@@ -1,13 +1,24 @@
 package com.mukhutdinov.bulat.revoluttest.ui.adapter
 
+import android.content.Context
 import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import com.mukhutdinov.bulat.revoluttest.model.Currency
+import com.mukhutdinov.bulat.revoluttest.util.showError
+import io.reactivex.Single
+import io.reactivex.android.schedulers.AndroidSchedulers
+import io.reactivex.disposables.CompositeDisposable
+import io.reactivex.schedulers.Schedulers
 import java.math.BigDecimal
 import java.math.RoundingMode
 
-class CurrencyAdapter(baseCurrency: Currency) : RecyclerView.Adapter<CurrencyViewHolder>() {
+class CurrencyAdapter(
+    baseCurrency: Currency,
+    private val context: Context
+) : RecyclerView.Adapter<CurrencyViewHolder>() {
+
+    private val compositeDisposable = CompositeDisposable()
 
     private val shownCurrencies = mutableListOf<Currency>()
 
@@ -17,56 +28,107 @@ class CurrencyAdapter(baseCurrency: Currency) : RecyclerView.Adapter<CurrencyVie
 
     private var coefficient: BigDecimal = BigDecimal.ONE
 
-    private var onBind = false
+    private var isBinding = false
 
     private val clickListener: (Int) -> Unit = {
-        selected = baseCurrencies[it]
+        compositeDisposable.add(Single
+            .fromCallable {
+                selected = baseCurrencies[it]
 
-        val baseSorted = sort(baseCurrencies)
-        baseCurrencies.clear()
-        baseCurrencies.addAll(baseSorted)
+                val baseSorted = sort(baseCurrencies)
+                baseCurrencies.clear()
+                baseCurrencies.addAll(baseSorted)
 
-        val sorted = sort(shownCurrencies)
-        dispatchUpdates(shownCurrencies, sorted.toMutableList())
+                val sorted = sort(shownCurrencies)
+                sorted
+            }
+            .subscribeOn(Schedulers.computation())
+            .observeOn(AndroidSchedulers.mainThread())
+            .subscribe(
+                {
+                    dispatchUpdates(shownCurrencies, it)
+                },
+                {
+                    context.showError(it.message)
+                }
+            )
+        )
     }
 
     private val selectedValueChangeListener: (String) -> Unit = {
-        coefficient = BigDecimal(it).divide(selected.value, SCALE, RoundingMode.CEILING)
+        compositeDisposable.add(Single
+            .fromCallable {
+                coefficient = BigDecimal(it).divide(selected.value, SCALE, RoundingMode.CEILING)
 
-        val copy = baseCurrencies.map { it.copy().apply { value = it.value } }
+                val copy = copy(baseCurrencies)
+                adjust(copy, BigDecimal(it))
 
-        copy.forEachIndexed { index, item ->
-            if (index == 0) item.value = BigDecimal(it)
-            else item.value *= coefficient
-        }
+                shownCurrencies[0] = selected.copy().apply { value = BigDecimal(it) }
 
-        shownCurrencies[0] = selected.copy().apply { value = BigDecimal(it) }
-
-        dispatchUpdates(shownCurrencies, copy.toMutableList())
+                copy
+            }
+            .subscribeOn(Schedulers.computation())
+            .observeOn(AndroidSchedulers.mainThread())
+            .subscribe(
+                {
+                    dispatchUpdates(shownCurrencies, it)
+                },
+                {
+                    context.showError(it.message)
+                }
+            )
+        )
     }
 
     fun updateCurrencies(updated: List<Currency>) {
-        baseCurrencies.clear()
-        baseCurrencies.addAll(sort(updated))
+        compositeDisposable.add(Single
+            .fromCallable {
+                baseCurrencies.clear()
+                baseCurrencies.addAll(sort(updated))
 
-        if (baseCurrencies.isNotEmpty()) {
-            coefficient = (coefficient * selected.value.divide(baseCurrencies[0].value, SCALE, RoundingMode.CEILING))
-                .stripTrailingZeros()
-            coefficient = coefficient.setScale(SCALE, RoundingMode.CEILING)
-            selected = baseCurrencies[0]
-        }
+                if (baseCurrencies.isNotEmpty()) {
+                    coefficient =
+                        (coefficient * selected.value.divide(baseCurrencies[0].value, SCALE, RoundingMode.CEILING))
+                            .stripTrailingZeros()
 
-        val sorted = sort(updated).map { it.copy().apply { value = it.value } }
-        if (shownCurrencies.isNotEmpty()) {
-            sorted.forEachIndexed { index, item ->
-                if (index == 0) item.value = shownCurrencies[0].value
-                else item.value *= coefficient
+                    coefficient = coefficient.setScale(SCALE, RoundingMode.CEILING)
+                    selected = baseCurrencies[0]
+                }
+
+                val sortedCopy = copy(sort(updated))
+                if (shownCurrencies.isNotEmpty()) {
+                    adjust(sortedCopy, shownCurrencies[0].value)
+                }
+                sortedCopy
             }
-        }
+            .subscribeOn(Schedulers.computation())
+            .observeOn(AndroidSchedulers.mainThread())
+            .subscribe(
+                {
+                    dispatchUpdates(shownCurrencies, it)
+                },
+                {
+                    context.showError(it.message)
+                }
+            )
+        )
+    }
 
-        dispatchUpdates(shownCurrencies, sorted.toMutableList())
-        shownCurrencies.clear()
-        shownCurrencies.addAll(sorted)
+    fun onStop() {
+        compositeDisposable.clear()
+    }
+
+    fun onDestroy() {
+        compositeDisposable.dispose()
+    }
+
+    private fun copy(original: List<Currency>) = original.map { it.copy().apply { value = it.value } }
+
+    private fun adjust(list: List<Currency>, valueOfFirst: BigDecimal) {
+        list.forEachIndexed { index, item ->
+            if (index == 0) item.value = valueOfFirst
+            else item.value *= coefficient
+        }
     }
 
     private fun dispatchUpdates(oldValues: MutableList<Currency>, newValues: List<Currency>) {
@@ -76,7 +138,7 @@ class CurrencyAdapter(baseCurrency: Currency) : RecyclerView.Adapter<CurrencyVie
         oldValues.clear()
         oldValues.addAll(newValues)
 
-        if (!onBind) {
+        if (!isBinding) {
             userDiffResult.dispatchUpdatesTo(this)
         }
     }
@@ -98,9 +160,9 @@ class CurrencyAdapter(baseCurrency: Currency) : RecyclerView.Adapter<CurrencyVie
         shownCurrencies.size
 
     override fun onBindViewHolder(holder: CurrencyViewHolder, position: Int) {
-        onBind = true
+        isBinding = true
         holder.bindTo(shownCurrencies[position])
-        onBind = false
+        isBinding = false
     }
 
     override fun onViewRecycled(holder: CurrencyViewHolder) {

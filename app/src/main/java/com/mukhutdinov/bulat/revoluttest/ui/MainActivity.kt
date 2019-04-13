@@ -3,12 +3,12 @@ package com.mukhutdinov.bulat.revoluttest.ui
 import android.os.Bundle
 import android.view.View.GONE
 import android.view.View.VISIBLE
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.Observer
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.mukhutdinov.bulat.revoluttest.R
 import com.mukhutdinov.bulat.revoluttest.ui.adapter.CurrencyAdapter
+import com.mukhutdinov.bulat.revoluttest.util.showError
 import kotlinx.android.synthetic.main.activity_main.*
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
@@ -17,11 +17,13 @@ class MainActivity : AppCompatActivity() {
 
     private val viewModel: MainViewModel by viewModel<MainAndroidViewModel>()
 
+    private lateinit var adapter: CurrencyAdapter
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        val adapter = CurrencyAdapter(viewModel.baseCurrency)
+        adapter = CurrencyAdapter(viewModel.baseCurrency, this)
 
         adapter.setHasStableIds(true)
 
@@ -48,7 +50,19 @@ class MainActivity : AppCompatActivity() {
         viewModel.error.observe(this, Observer {
             loading.visibility = GONE
 
-            Toast.makeText(applicationContext, "Oops... an error has occurred. Details: $it", Toast.LENGTH_SHORT).show()
+            showError(it)
         })
+    }
+
+    override fun onStop() {
+        super.onStop()
+        adapter.onStop()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        if (::adapter.isInitialized) {
+            adapter.onDestroy()
+        }
     }
 }

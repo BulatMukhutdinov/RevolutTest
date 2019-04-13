@@ -11,5 +11,5 @@ interface MainViewModel {
 
     val isUpToDate: LiveData<Boolean>
 
-    val error: LiveData<String>
+    val error: LiveData<String?>
 }
