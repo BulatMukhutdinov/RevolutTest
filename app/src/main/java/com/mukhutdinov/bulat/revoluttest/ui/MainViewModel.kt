@@ -5,11 +5,13 @@ import com.mukhutdinov.bulat.revoluttest.model.Currency
 
 interface MainViewModel {
 
-    val baseCurrency: Currency
-
-    val currencies: LiveData<List<Currency>>
+    val currencies: LiveData<Pair<List<Currency>, Boolean>>
 
     val isUpToDate: LiveData<Boolean>
 
     val error: LiveData<String?>
+
+    fun onSelectedValueUpdate(newValue: String, shown: List<Currency>)
+
+    fun onSelectedUpdate(newPosition: Int, shown: List<Currency>)
 }

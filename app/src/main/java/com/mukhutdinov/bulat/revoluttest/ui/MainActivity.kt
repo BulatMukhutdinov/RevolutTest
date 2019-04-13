@@ -23,7 +23,10 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        adapter = CurrencyAdapter(viewModel.baseCurrency, this)
+        adapter = CurrencyAdapter(
+            clickListener = { viewModel.onSelectedUpdate(it, adapter.shownCurrencies) },
+            selectedValueChangeListener = { viewModel.onSelectedValueUpdate(it, adapter.shownCurrencies) }
+        )
 
         adapter.setHasStableIds(true)
 
@@ -34,7 +37,7 @@ class MainActivity : AppCompatActivity() {
         viewModel.currencies.observe(this, Observer {
             loading.visibility = GONE
 
-            adapter.updateCurrencies(it)
+            adapter.updateCurrencies(it.first,it.second)
         })
 
         viewModel.isUpToDate.observe(this, Observer {
@@ -52,17 +55,5 @@ class MainActivity : AppCompatActivity() {
 
             showError(it)
         })
-    }
-
-    override fun onStop() {
-        super.onStop()
-        adapter.onStop()
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        if (::adapter.isInitialized) {
-            adapter.onDestroy()
-        }
     }
 }

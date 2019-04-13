@@ -5,9 +5,11 @@ import com.github.kittinunf.fuel.gson.responseObject
 import com.mukhutdinov.bulat.revoluttest.db.CurrencyDao
 import com.mukhutdinov.bulat.revoluttest.db.CurrencyEntity
 import com.mukhutdinov.bulat.revoluttest.model.Currencies
+import com.mukhutdinov.bulat.revoluttest.model.Currency
 import io.reactivex.Completable
 import io.reactivex.Flowable
 import io.reactivex.Single
+import java.math.BigDecimal
 import java.util.concurrent.TimeUnit
 
 class CurrenciesBoundedGateway(
@@ -15,9 +17,9 @@ class CurrenciesBoundedGateway(
     private val fuelManager: FuelManager
 ) : CurrenciesGateway {
 
-    override val baseCurrency: String = "EUR"
-
     private var currencies: Currencies? = null
+
+    override fun baseCurrency(): Currency = Currency("EUR").apply { value = BigDecimal.ONE }
 
     override fun observe(): Flowable<Currencies> =
         fetchFromRemote()
@@ -40,7 +42,7 @@ class CurrenciesBoundedGateway(
 
     private fun fetchFromRemote(): Single<Currencies> =
         Single.fromCallable {
-            val (_, _, result) = fuelManager.get("latest", listOf("base" to baseCurrency))
+            val (_, _, result) = fuelManager.get("latest", listOf("base" to baseCurrency().name))
                 .responseObject<CurrenciesDto>()
 
             val (response, error) = result
@@ -105,6 +107,6 @@ class CurrenciesBoundedGateway(
         }
 
     companion object {
-        private const val UPDATE_RATE = 1L
+        private const val UPDATE_RATE = 10L
     }
 }

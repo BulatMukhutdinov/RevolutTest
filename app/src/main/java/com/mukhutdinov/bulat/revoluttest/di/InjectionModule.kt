@@ -3,6 +3,8 @@ package com.mukhutdinov.bulat.revoluttest.di
 import androidx.room.Room
 import com.github.kittinunf.fuel.core.FuelManager
 import com.mukhutdinov.bulat.revoluttest.db.RevolutTestDatabase
+import com.mukhutdinov.bulat.revoluttest.domain.CurrencyCalculator
+import com.mukhutdinov.bulat.revoluttest.domain.RevolutCurrencyCalculator
 import com.mukhutdinov.bulat.revoluttest.gateway.CurrenciesBoundedGateway
 import com.mukhutdinov.bulat.revoluttest.gateway.CurrenciesGateway
 import com.mukhutdinov.bulat.revoluttest.ui.MainAndroidViewModel
@@ -15,7 +17,11 @@ object InjectionModule {
     val module = module {
 
         viewModel {
-            MainAndroidViewModel(get())
+            MainAndroidViewModel(get(), get())
+        }
+
+        factory<CurrencyCalculator> {
+            RevolutCurrencyCalculator(get<CurrenciesGateway>().baseCurrency())
         }
 
         single<CurrenciesGateway> {
