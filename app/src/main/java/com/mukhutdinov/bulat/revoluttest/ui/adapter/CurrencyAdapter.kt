@@ -21,15 +21,11 @@ class CurrencyAdapter(
             shownCurrencies[0] = updated[0].copy().apply { value = updated[0].value }
         }
 
-        dispatchUpdates(shownCurrencies, updated)
-    }
-
-    private fun dispatchUpdates(oldValues: MutableList<Currency>, newValues: List<Currency>) {
-        val userDiffUtilCallback = DiffUtilCallback(oldValues, newValues)
+        val userDiffUtilCallback = DiffUtilCallback(shownCurrencies, updated)
         val userDiffResult = DiffUtil.calculateDiff(userDiffUtilCallback)
 
-        oldValues.clear()
-        oldValues.addAll(newValues)
+        shownCurrencies.clear()
+        shownCurrencies.addAll(updated)
 
         if (!isBinding) {
             userDiffResult.dispatchUpdatesTo(this)
