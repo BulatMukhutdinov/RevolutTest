@@ -12,3 +12,4 @@ input becomes first responder. When you’re changing the amount the app must si
 update the corresponding value for other currencies.
 
 Use any libraries and languages(java/kotlin) you want. UI does not have to be exactly the same, it’s up to you.
+Video demo: https://youtu.be/omcS-6LeKoo 
